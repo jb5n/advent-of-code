@@ -80,38 +80,4 @@ def day_part1():
 		world = prune_world(world, min(heightmap))
 	return max_y
 
-def day_part2():
-	jets = parse_input()
-	shape_pool = [
-		set([(0, 0), (1, 0), (2, 0), (3, 0)]),
-		set([(1, 0), (0, 1), (1, 1), (2, 1), (1, 2)]),
-		set([(0, 0), (1, 0), (2, 0), (2, 1), (2, 2)]),
-		set([(0, 0), (0, 1), (0, 2), (0, 3)]),
-		set([(0, 0), (1, 0), (0, 1), (1, 1)])
-	]
-	
-	world = set([(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0)])
-	max_y = 0
-	heightmap = [0, 0, 0, 0, 0, 0, 0]
-	
-	jet_index = 0
-	for rock_count in range(0, 1000000000000):
-		rock = RockShape(shape_pool[rock_count % len(shape_pool)], (2, max_y + 4))
-		while True:
-			shift_right = jets[jet_index % len(jets)] == '>'
-			jet_index += 1
-			if can_fit(world, rock.get_world_set((1 if shift_right else -1, 0)), rock.origin[1]):
-				rock.shift(shift_right)
-			if can_fit(world, rock.get_world_set((0, -1)), rock.origin[1]):
-				rock.fall()
-			else:
-				break
-		for rock_pos in rock.get_world_set((0, 0)):
-			max_y = max(rock_pos[1], max_y)
-			heightmap[rock_pos[0]] = max(heightmap[rock_pos[0]], rock_pos[1])
-		world = world.union(rock.get_world_set((0, 0)))
-		world = prune_world(world, min(heightmap))
-	return max_y
-
 print(f"Part 1 answer: {str(day_part1())}")
-print(f"Part 2 answer: {str(day_part2())}")
