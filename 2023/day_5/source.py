@@ -1,5 +1,6 @@
 from pathlib import WindowsPath
 import concurrent.futures
+from multiprocessing import Process, Queue
 
 input_path = WindowsPath(__file__).parent / 'input.txt'
 
@@ -38,13 +39,30 @@ def part1():
 	
 	return min(locations)
 
+def brute_force_baby(seed_range, best_num_group, group_mappings):
+	lowest_loc = 100000000000000000
+	best_seed = 0
+	for i, seed in enumerate(seed_range):
+		cur_val = int(seed)
+		for group in group_mappings:
+			for mapping in group:
+				if cur_val >= mapping['min_src'] and cur_val <= mapping['max_src']:
+					cur_val += mapping['diff']
+					break
+		if cur_val < lowest_loc:
+			lowest_loc = cur_val
+			best_seed = seed
+		if i % 1000000 == 0:
+			print(f"seed group progress {i / len(seed_range)}%, best so far {lowest_loc}, best seed {best_seed}")
+	best_num_group.put(lowest_loc)
+	return lowest_loc
+
 def part2():
 	input = ''
 	with open(input_path) as f:
 		input = f.read()
 	
 	groups = input.split('\n\n')
-
 	group_mappings = []
 	for group in groups:
 		mappings = []
@@ -63,58 +81,28 @@ def part2():
 			})
 		group_mappings.append(mappings)
 	
-	group_mappings.reverse()
-	
 	seed_input = groups[0].split(': ')[1].split(' ')
 	seed_ranges = [range(int(pair[0]), int(pair[0]) + int(pair[1])) for pair in zip(seed_input[::2], seed_input[1::2])]
 	
-	def get_src_seed(i, val):
-		if len(group_mappings) == i + 2:
-			for rng in seed_ranges:
-				if val in rng:
-					return val
-			return None # not in seeds
-		
-		cur_val = val
-		for group in group_mappings[i + 1:]:
-			for mapping in group:
-				if cur_val >= mapping['min_dest'] and cur_val <= mapping['max_dest']:
-					cur_val -= mapping['diff']
-					break
-
-		for rng in seed_ranges:
-			if cur_val in rng:
-				return cur_val
-		return None # not in seeds
+	processes = []
+	best_nums = Queue()
+	for i, seed_rng in enumerate(seed_ranges):
+		p = Process(target=brute_force_baby, args=(seed_rng, best_nums, group_mappings))
+		processes.append(p)
+		p.start()
+    
+	for p in processes:
+		p.join()
 	
-	min_loc = 1000000000000000000
-	for i, group in enumerate(group_mappings):
-		for j, mapping in enumerate(group):
-			for val in range(mapping['min_dest'], mapping['max_dest'] + 1):
-				print(f"Group progress: {i / len(group_mappings) * 100}%\tMapping progress: {j / len(group_mappings) * 100}%\tVal progress: {val / mapping['max_dest'] * 100}%")
-				src_seed = get_src_seed(i, val)
-				if src_seed is not None and src_seed < min_loc:
-					min_loc = val
+	best_num_list = []
+	while not best_nums.empty():
+		best_num_list.append(best_nums.get())
 	
-	return min_loc
-
-def translations():
-	# temperature/humidity sets
-	ths = [[0, 69, 1], [1, 0, 69]]
-	# humidity/location sets
-	hls = [[60, 56, 37], [56, 93, 4]]
+	print(f"All best nums: {best_num_list}")
 	
-	for th_set in ths:
-		for hl_set in hls:
-			range_min = max(th_set[1], hl_set[1])
-			range_max = min(th_set[1] + th_set[2], hl_set[1] + hl_set[2])
-			if range_min <= range_max:
-				print(f"Overlap translation: {range_min} - {range_max}")
-			lower_range_min = min(th_set[1], hl_set[1])
-			print(f"Lower range: {lower_range_min} - {range_min - 1}")
-			upper_range_max = max(th_set[1] + th_set[2], hl_set[1] + hl_set[2])
-			print(f"Upper range: {range_max + 1} - {upper_range_max}")
+	# off by one??
+	return min(best_num_list)
 
 print(part1())
-#translations()
-print(part2())
+if __name__ == '__main__':  
+	print(part2())
