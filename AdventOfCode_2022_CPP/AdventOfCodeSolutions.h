@@ -20,6 +20,8 @@ public:
 private:
 	// Day solutions
 	void Day1(const vector<string>& lines);
+	void Day2(const vector<string>& lines);
+	void Day3(const vector<string>& lines);
 
 	// Utilities
 	vector<string> SplitString(string input, const string& delimiter, bool removeEmpties = true) const;

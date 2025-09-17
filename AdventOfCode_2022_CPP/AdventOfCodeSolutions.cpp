@@ -11,6 +11,8 @@ using namespace std;
 
 AdventOfCodeSolutions::AdventOfCodeSolutions() {
 	solutions[1] = &AdventOfCodeSolutions::Day1;
+	solutions[2] = &AdventOfCodeSolutions::Day2;
+	solutions[3] = &AdventOfCodeSolutions::Day3;
 }
 
 void AdventOfCodeSolutions::SolveDay(int day) {
@@ -72,6 +74,120 @@ void AdventOfCodeSolutions::Day1(const vector<string>& lines) {
 	}
 
 	cout << "Day 1 part 2: " << similarityTotal << endl;
+}
+
+void AdventOfCodeSolutions::Day2(const vector<string>& lines) {
+	int safeReports = 0;
+
+	auto isReportSafe = [](const vector<int>& report) {
+		vector<int> sortedReportAsc = report;
+		sort(sortedReportAsc.begin(), sortedReportAsc.end());
+		vector<int> sortedReportDesc = report;
+		sort(sortedReportDesc.begin(), sortedReportDesc.end(), greater<int>());
+		if (sortedReportDesc != report && sortedReportAsc != report) {
+			return false;
+		}
+		for (int i = 1; i < report.size(); i++) {
+			if (report[i] == report[i - 1] || abs(report[i] - report[i - 1]) > 3) {
+				return false;
+			}
+		}
+		return true;
+	};
+
+	vector<vector<int>> unsafeReports;
+	for (const string& line : lines) {
+		const vector<string> splitStrings = SplitString(line, " ");
+		vector<int> report(splitStrings.size());
+		transform(splitStrings.begin(), splitStrings.end(), report.begin(),
+			[](string input) { return stoi(input); });
+
+		if (isReportSafe(report)) {
+			safeReports++;
+		}
+		else {
+			unsafeReports.push_back(report);
+		}
+	}
+
+	cout << "Safe reports: " << safeReports << endl;
+
+	for (const vector<int>& unsafeReport : unsafeReports) {
+		for (int i = 0; i < unsafeReport.size(); i++) {
+			vector<int> tryReport = unsafeReport;
+			tryReport.erase(tryReport.begin() + i);
+			if (isReportSafe(tryReport)) {
+				safeReports++;
+				break;
+			}
+		}
+	}
+
+	cout << "With problem dampener: " << safeReports << endl;
+}
+
+void AdventOfCodeSolutions::Day3(const vector<string>& lines) {
+	int mulTotalIgnoringDonts = 0;
+	int mulTotalWithDonts = 0;
+	
+	string fullInput;
+	for (const string& line : lines) {
+		fullInput += line;
+	}
+
+	int foundIndex = fullInput.find("mul(");
+	while (foundIndex != string::npos) {
+		int nextFoundIndex = fullInput.find("mul(", foundIndex + 1);
+
+		int lastDontOccurrence = fullInput.rfind("don't()", foundIndex);
+		int lastDoOccurrence = fullInput.rfind("do()", foundIndex);
+		bool enabled = lastDontOccurrence == string::npos || lastDoOccurrence > lastDontOccurrence;
+
+		const int searchEnd = nextFoundIndex == string::npos ? fullInput.length() : nextFoundIndex;
+		enum SearchStage { FIRST_NUM, SECOND_NUM };
+		SearchStage stage = FIRST_NUM;
+		string firstNumStr, secondNumStr;
+		bool isValidMul = false;
+		for (int i = foundIndex + 4; i < searchEnd; i++) {
+			if (stage == FIRST_NUM) {
+				if (isdigit(fullInput[i])) {
+					firstNumStr += fullInput[i];
+				}
+				else if (fullInput[i] == ',' && !firstNumStr.empty()) {
+					stage = SECOND_NUM;
+				}
+				else {
+					break;
+				}
+			}
+			else if (stage == SECOND_NUM) {
+				if (isdigit(fullInput[i])) {
+					secondNumStr += fullInput[i];
+				}
+				else if (fullInput[i] == ')' && !secondNumStr.empty()) {
+					isValidMul = true;
+					break;
+				}
+				else {
+					break;
+				}
+			}
+		}
+
+		if (isValidMul) {
+			int num1 = stoi(firstNumStr);
+			int num2 = stoi(secondNumStr);
+			mulTotalIgnoringDonts += num1 * num2;
+			if (enabled) {
+				mulTotalWithDonts += num1 * num2;
+			}
+		}
+
+		foundIndex = nextFoundIndex;
+	}
+
+	cout << "Original multiplication total: " << mulTotalIgnoringDonts << endl;
+	cout << "Multiplication total avoiding Dont blocks: " << mulTotalWithDonts << endl;
 }
 
 vector<string> AdventOfCodeSolutions::SplitString(string input, const string& delimiter, bool removeEmpties) const {
