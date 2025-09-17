@@ -3,6 +3,7 @@
 #include <functional>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <string>
 
 #include "AdventOfCodeSolutions.h"
@@ -13,6 +14,9 @@ AdventOfCodeSolutions::AdventOfCodeSolutions() {
 	solutions[1] = &AdventOfCodeSolutions::Day1;
 	solutions[2] = &AdventOfCodeSolutions::Day2;
 	solutions[3] = &AdventOfCodeSolutions::Day3;
+	solutions[4] = &AdventOfCodeSolutions::Day4;
+	solutions[5] = &AdventOfCodeSolutions::Day5;
+	solutions[6] = &AdventOfCodeSolutions::Day6;
 }
 
 void AdventOfCodeSolutions::SolveDay(int day) {
@@ -188,6 +192,206 @@ void AdventOfCodeSolutions::Day3(const vector<string>& lines) {
 
 	cout << "Original multiplication total: " << mulTotalIgnoringDonts << endl;
 	cout << "Multiplication total avoiding Dont blocks: " << mulTotalWithDonts << endl;
+}
+
+void AdventOfCodeSolutions::Day4(const vector<string>& lines) {
+	int xmasCounts = 0;
+
+	auto posIsCh = [lines](int row, int col, char testChar) {
+		if (row < 0 || col < 0 || row >= lines.size() || col >= lines[row].length()) {
+			return false;
+		}
+		return lines[row][col] == testChar;
+	};
+
+	auto evalFunc = [lines, posIsCh](int xRow, int xCol) {
+		int evalPositionals[8][3][2] = {
+			{ {  0,  1 }, {  0,  2 }, {  0,  3 } }, // horizontal fwd
+			{ {  0, -1 }, {  0, -2 }, {  0, -3 } }, // horizontal bwd
+			{ {  1,  0 }, {  2,  0 }, {  3,  0 } }, // vertical downward
+			{ { -1,  0 }, { -2,  0 }, { -3,  0 } }, // vertical upward
+			{ {  1,  1 }, {  2,  2 }, {  3,  3 } }, // pointing SE
+			{ { -1,  1 }, { -2,  2 }, { -3,  3 } }, // pointing NE
+			{ {  1, -1 }, {  2, -2 }, {  3, -3 } }, // pointing NW
+			{ { -1, -1 }, { -2, -2 }, { -3, -3 } } // pointing SW
+		};
+
+		int count = 0;
+		for (const auto& evalPositional : evalPositionals) {
+			if (posIsCh(xRow + evalPositional[0][0], xCol + evalPositional[0][1], 'M') &&
+				posIsCh(xRow + evalPositional[1][0], xCol + evalPositional[1][1], 'A') &&
+				posIsCh(xRow + evalPositional[2][0], xCol + evalPositional[2][1], 'S')) {
+				count++;
+			}
+		}
+		return count;
+	};
+	
+	for (int row = 0; row < lines.size(); row++) {
+		for (int col = 0; col < lines[row].length(); col++) {
+			if (lines[row][col] == 'X') {
+				xmasCounts += evalFunc(row, col);
+			}
+		}
+	}
+
+	cout << "Found XMAS " << xmasCounts << " times\n";
+
+	int xShapedMasCount = 0;
+
+	auto xShapedEvalFunc = [lines, posIsCh](int aRow, int aCol) {
+		// NW-SE axis
+		bool hasNWSE = false;
+		if ((posIsCh(aRow - 1, aCol - 1, 'M') && posIsCh(aRow + 1, aCol + 1, 'S')) ||
+			(posIsCh(aRow - 1, aCol - 1, 'S') && posIsCh(aRow + 1, aCol + 1, 'M'))) {
+			hasNWSE = true;
+		}
+		bool hasNESW = false;
+		if ((posIsCh(aRow - 1, aCol + 1, 'M') && posIsCh(aRow + 1, aCol - 1, 'S')) ||
+			(posIsCh(aRow - 1, aCol + 1, 'S') && posIsCh(aRow + 1, aCol - 1, 'M'))) {
+			hasNESW = true;
+		}
+
+		return hasNWSE && hasNESW;
+	};
+
+	for (int row = 0; row < lines.size(); row++) {
+		for (int col = 0; col < lines[row].length(); col++) {
+			if (lines[row][col] == 'A') {
+				if (xShapedEvalFunc(row, col)) {
+					xShapedMasCount++;
+				}
+			}
+		}
+	}
+
+	cout << "Found X-MAS (X-shaped MAS) " << xShapedMasCount << " times\n";
+}
+
+void AdventOfCodeSolutions::Day5(const vector<string>& lines) {
+	map<int, vector<int>> requiredPredecessors;
+	auto evaluatePredecessors = [requiredPredecessors](int evalIndex, vector<int> instructions) {
+
+	};
+
+	int middlePageNumTotal = 0;
+	bool evaluatingPredecessors = true;
+	vector<vector<int>> disorderedInstructions;
+	for (const string& line : lines) {
+		if (line.empty() && evaluatingPredecessors) {
+			evaluatingPredecessors = false;
+			continue;
+		}
+		if (evaluatingPredecessors) {
+			vector<string> split = SplitString(line, "|");
+			int predecessor = stoi(split[0]);
+			int successor = stoi(split[1]);
+			requiredPredecessors[successor].push_back(predecessor);
+			continue;
+		}
+
+		vector<string> instructionStrs = SplitString(line, ",");
+		vector<int> instructions(instructionStrs.size());
+		transform(instructionStrs.begin(), instructionStrs.end(), instructions.begin(),
+			[](const string& st) { return stoi(st); });
+
+		bool isOrdered = true;
+		for (int i = 0; i < instructions.size(); i++) {
+			vector<int> predecessors = requiredPredecessors[instructions[i]];
+			if (predecessors.empty()) {
+				continue;
+			}
+			for (const int& predecessor : predecessors) {
+				auto predecessorIt = find(instructions.begin(), instructions.end(), predecessor);
+				if (predecessorIt == instructions.end()) {
+					continue;
+				}
+				int indexOfPredecessor = distance(instructions.begin(), predecessorIt);
+				if (indexOfPredecessor > i) {
+					isOrdered = false;
+					break;
+				}
+			}
+			if (!isOrdered) {
+				break;
+			}
+		}
+
+		if (!isOrdered) {
+			disorderedInstructions.push_back(instructions);
+			continue;
+		}
+		
+		int middleValue = instructions[(instructions.size() - 1) / 2];
+		middlePageNumTotal += middleValue;
+	}
+
+	cout << "Middle page num total " << middlePageNumTotal << endl;
+
+	auto sortFunc = [&requiredPredecessors](int instA, int instB) {
+		// return true if a should go before b
+		if (requiredPredecessors.find(instA) != requiredPredecessors.end()) {
+			vector<int> predecessorsOfA = requiredPredecessors[instA];
+			if (find(predecessorsOfA.begin(), predecessorsOfA.end(), instB) != predecessorsOfA.end()) {
+				// B is a predecessor of A, B should be before A
+				return false;
+			}
+		}
+		return true;
+	};
+
+	int correctedMiddlePageNumTotal = 0;
+	for (vector<int> instructions : disorderedInstructions) {
+		sort(instructions.begin(), instructions.end(), sortFunc);
+
+		int middleValue = instructions[(instructions.size() - 1) / 2];
+		correctedMiddlePageNumTotal += middleValue;
+	}
+
+	cout << "Corrected middle page num total " << correctedMiddlePageNumTotal << endl;
+}
+
+void AdventOfCodeSolutions::Day6(const vector<string>& lines) {
+	pair<int, int> pos(-1, -1);
+	for (int y = 0; y < lines.size(); y++) {
+		for (int x = 0; x < lines[y].length(); x++) {
+			if (lines[y][x] == '^') {
+				pos = pair<int, int>(x, y);
+				break;
+			}
+		}
+		if (pos.first != -1) {
+			break;
+		}
+	}
+
+	pair<int, int> stepCycle[4] = { pair(0, -1), pair(1, 0), pair(0, 1), pair(-1, 0) };
+	int stepCycleIndex = 0;
+
+	auto isOnMap = [lines](const pair<int, int>& evalPos) {
+		return evalPos.first >= 0 && evalPos.first < lines[0].length() &&
+			evalPos.second >= 0 && evalPos.second < lines.size();
+	};
+
+	set<pair<int, int>> stepLocations;
+	stepLocations.insert(pos);
+	while (isOnMap(pos)) {
+		pair<int, int>& stepDir = stepCycle[stepCycleIndex];
+		pair<int, int> evalPos(pos.first + stepDir.first, pos.second + stepDir.second);
+		if (!isOnMap(evalPos)) {
+			break;
+		}
+		if (lines[evalPos.second][evalPos.first] == '#') {
+			stepCycleIndex = (stepCycleIndex + 1) % 4;
+		}
+		else {
+			pos = evalPos;
+			stepLocations.insert(pos);
+		}
+	}
+
+	cout << "Guard stepped in " << stepLocations.size() << " unique positions\n";
+
 }
 
 vector<string> AdventOfCodeSolutions::SplitString(string input, const string& delimiter, bool removeEmpties) const {

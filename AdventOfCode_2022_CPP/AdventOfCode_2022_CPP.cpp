@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const int dayCounter = 3;
+const int dayCounter = 6;
 
 int main()
 {

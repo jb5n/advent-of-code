@@ -22,6 +22,9 @@ private:
 	void Day1(const vector<string>& lines);
 	void Day2(const vector<string>& lines);
 	void Day3(const vector<string>& lines);
+	void Day4(const vector<string>& lines);
+	void Day5(const vector<string>& lines);
+	void Day6(const vector<string>& lines);
 
 	// Utilities
 	vector<string> SplitString(string input, const string& delimiter, bool removeEmpties = true) const;
